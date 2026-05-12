@@ -34,7 +34,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             botToken: config.botToken,
             chatID: Int(config.chatID) ?? 0,
             onMessage: { [weak self] text in self?.handleMessage(text) },
-            onStatusChange: { [weak self] status in self?.menuBarController.setStatusText(status) }
+            onStatusChange: { [weak self] status in
+                guard self?.menuBarController.isActive == true else { return }
+                self?.menuBarController.setStatusText(status)
+            }
         )
         poller = p
         p.start()

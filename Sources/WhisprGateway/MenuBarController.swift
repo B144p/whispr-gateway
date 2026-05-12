@@ -97,19 +97,6 @@ private final class ToggleSwitchView: NSView {
         toggle.state = active ? .on : .off
     }
 
-    override func draw(_ dirtyRect: NSRect) {
-        if enclosingMenuItem?.isHighlighted == true {
-            NSColor.selectedContentBackgroundColor.setFill()
-            dirtyRect.fill()
-            label.textColor = .selectedMenuItemTextColor
-        } else {
-            NSColor.clear.setFill()
-            dirtyRect.fill()
-            label.textColor = .labelColor
-        }
-        super.draw(dirtyRect)
-    }
-
     @objc private func switchChanged() {
         // Let AppDelegate drive the final state back via setActive() —
         // don't sync toggle.state here to avoid fighting with error rollback.
