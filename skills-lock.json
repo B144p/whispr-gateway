@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "swift-development": {
+      "source": "hmohamed01/swift-development",
+      "sourceType": "github",
+      "skillPath": "swift-development/SKILL.md",
+      "computedHash": "acc95c0fc5f6cb557cf1022b4a71752ab9059f71f2c7f5bc5572224a3b462ad6"
+    },
+    "swiftui-pro": {
+      "source": "twostraws/swiftui-agent-skill",
+      "sourceType": "github",
+      "skillPath": "swiftui-pro/SKILL.md",
+      "computedHash": "07033426e384295a4b49cf0b2ffdefd4098cae4af53fef16bc1f2d9281118c41"
+    }
+  }
+}
