@@ -4,25 +4,29 @@ import AppKit
 final class MenuBarController {
     private let statusItem: NSStatusItem
     private let menu: NSMenu
-    private let toggleItem: NSMenuItem
+    private let switchView: ToggleSwitchView
     private let statusLabel: NSMenuItem
     private let lastMessageItem: NSMenuItem
-    // Must be retained here — NSMenuItem.target is a weak reference.
-    private var toggleTarget: MenuActionTarget?
 
     private(set) var isActive: Bool = false
-    var onToggle: (() -> Void)?
+    var onToggle: (() -> Void)? {
+        didSet { switchView.onToggle = onToggle }
+    }
 
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         menu = NSMenu()
-        toggleItem = NSMenuItem(title: "Activate", action: nil, keyEquivalent: "")
+
+        switchView = ToggleSwitchView()
+        let switchItem = NSMenuItem()
+        switchItem.view = switchView
+
         statusLabel = NSMenuItem(title: "Status: Inactive", action: nil, keyEquivalent: "")
         statusLabel.isEnabled = false
         lastMessageItem = NSMenuItem(title: "No messages yet", action: nil, keyEquivalent: "")
         lastMessageItem.isEnabled = false
 
-        menu.addItem(toggleItem)
+        menu.addItem(switchItem)
         menu.addItem(.separator())
         menu.addItem(statusLabel)
         menu.addItem(.separator())
@@ -30,18 +34,13 @@ final class MenuBarController {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
-        let target = MenuActionTarget { [weak self] in self?.onToggle?() }
-        toggleTarget = target
-        toggleItem.target = target
-        toggleItem.action = #selector(MenuActionTarget.trigger)
-
         statusItem.menu = menu
         updateIcon(active: false)
     }
 
     func setActive(_ active: Bool) {
         isActive = active
-        toggleItem.title = active ? "Inactivate" : "Activate"
+        switchView.setState(active)
         statusLabel.title = "Status: \(active ? "Active" : "Inactive")"
         updateIcon(active: active)
     }
@@ -51,7 +50,7 @@ final class MenuBarController {
     }
 
     func setLastMessage(_ text: String) {
-        let preview = text.count > 40 ? String(text.prefix(40)) + "…" : text
+        let preview = text.count > 40 ? String(text.prefix(40)) + "..." : text
         lastMessageItem.title = "Last: \"\(preview)\""
     }
 
@@ -64,9 +63,56 @@ final class MenuBarController {
     }
 }
 
-// Bridges NSMenuItem's ObjC selector dispatch to a Swift closure.
-private final class MenuActionTarget: NSObject {
-    private let action: () -> Void
-    init(action: @escaping () -> Void) { self.action = action }
-    @objc func trigger() { action() }
+// NSSwitch + label embedded in a menu item custom view.
+private final class ToggleSwitchView: NSView {
+    private let label = NSTextField(labelWithString: "Active")
+    private let toggle = NSSwitch()
+    var onToggle: (() -> Void)?
+
+    init() {
+        super.init(frame: NSRect(x: 0, y: 0, width: 200, height: 30))
+
+        label.font = .menuFont(ofSize: 0)
+        label.textColor = .labelColor
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        toggle.translatesAutoresizingMaskIntoConstraints = false
+        toggle.target = self
+        toggle.action = #selector(switchChanged)
+
+        addSubview(label)
+        addSubview(toggle)
+
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor),
+            toggle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            toggle.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func setState(_ active: Bool) {
+        toggle.state = active ? .on : .off
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        if enclosingMenuItem?.isHighlighted == true {
+            NSColor.selectedContentBackgroundColor.setFill()
+            dirtyRect.fill()
+            label.textColor = .selectedMenuItemTextColor
+        } else {
+            NSColor.clear.setFill()
+            dirtyRect.fill()
+            label.textColor = .labelColor
+        }
+        super.draw(dirtyRect)
+    }
+
+    @objc private func switchChanged() {
+        // Let AppDelegate drive the final state back via setActive() —
+        // don't sync toggle.state here to avoid fighting with error rollback.
+        onToggle?()
+    }
 }
