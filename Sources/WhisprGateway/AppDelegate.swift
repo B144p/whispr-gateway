@@ -52,6 +52,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleMessage(_ text: String) {
         menuBarController.setLastMessage(text)
-        Task { await pasteService.paste(text: text) }
+        pasteService.paste(text: text)
     }
 }

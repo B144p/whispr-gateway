@@ -3,6 +3,7 @@ import ApplicationServices
 
 @MainActor
 final class PasteService {
+    private var pending: Task<Void, Never>?
 
     func isAccessibilityGranted() -> Bool {
         return AXIsProcessTrusted()
@@ -26,7 +27,17 @@ final class PasteService {
         }
     }
 
-    func paste(text: String) async {
+    // Enqueue pastes serially so concurrent messages don't interleave their
+    // save/restore cycle and leave stale telegram text on the clipboard.
+    func paste(text: String) {
+        let previous = pending
+        pending = Task {
+            await previous?.value
+            await performPaste(text: text)
+        }
+    }
+
+    private func performPaste(text: String) async {
         guard isAccessibilityGranted() else {
             requestAccessibilityIfNeeded()
             return
@@ -34,7 +45,11 @@ final class PasteService {
         let pasteboard = NSPasteboard.general
         let saved = savePasteboard(pasteboard)
         pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        let item = NSPasteboardItem()
+        item.setString(text, forType: .string)
+        // Mark as transient so clipboard managers skip recording it in history.
+        item.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
+        pasteboard.writeObjects([item])
         try? await Task.sleep(nanoseconds: 100_000_000)
         sendCmdV()
         try? await Task.sleep(nanoseconds: 200_000_000)
