@@ -5,8 +5,7 @@ import ApplicationServices
 final class PasteService {
 
     func isAccessibilityGranted() -> Bool {
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue(): false]
-        return AXIsProcessTrustedWithOptions(options)
+        return AXIsProcessTrusted()
     }
 
     func requestAccessibilityIfNeeded() {
