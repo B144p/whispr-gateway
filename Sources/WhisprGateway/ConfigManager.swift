@@ -22,8 +22,21 @@ final class ConfigManager {
         return showSetupDialog()
     }
 
+    // ./config.env wins over ~/.config/ so `swift run` from project root works like a JS .env file.
+    private var localConfigFile: URL {
+        URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+            .appendingPathComponent("config.env")
+    }
+
     func load() -> AppConfig? {
-        guard let content = try? String(contentsOf: configFile, encoding: .utf8) else { return nil }
+        for file in [localConfigFile, configFile] {
+            if let config = parse(file: file) { return config }
+        }
+        return nil
+    }
+
+    private func parse(file: URL) -> AppConfig? {
+        guard let content = try? String(contentsOf: file, encoding: .utf8) else { return nil }
         var values: [String: String] = [:]
         for line in content.components(separatedBy: .newlines) {
             let t = line.trimmingCharacters(in: .whitespaces)

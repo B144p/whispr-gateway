@@ -8,3 +8,4 @@ DerivedData/
 .netrc
 requirement.md
 /docs
+config.env
